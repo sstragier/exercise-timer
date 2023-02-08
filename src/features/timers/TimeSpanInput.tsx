@@ -1,4 +1,5 @@
 import { Stack, TextField } from "@mui/material"
+import { useImmer } from "use-immer"
 import { type TimeSpan } from "./timersSlice"
 
 export interface TimeSpanProps {
@@ -7,19 +8,29 @@ export interface TimeSpanProps {
 }
 
 export function TimeSpanInput(props: TimeSpanProps) {
-    const onMinutesChanged = (e: React.FocusEvent<HTMLInputElement>) => {
+    const [timeSpan, updateTimeSpan] = useImmer(props.timeSpan);
+
+    const onMinutesChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
         let minutes = Math.floor(e.target.valueAsNumber)
         if (minutes < 0) minutes = 0;
         
-        props.onTimeSpanChanged({ ...props.timeSpan, minutes })
+        updateTimeSpan(draft => {
+            draft.minutes = minutes
+        })
     }
 
-    const onSecondsChanged = (e: React.FocusEvent<HTMLInputElement>) => {
+    const onSecondsChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
         let seconds = Math.floor(e.target.valueAsNumber);
         if (seconds < 0) seconds = 0;
         if (seconds > 59) seconds = 59;
 
-        props.onTimeSpanChanged({ ...props.timeSpan, seconds })
+        updateTimeSpan(draft => {
+            draft.seconds = seconds
+        })
+    }
+
+    const onTimeSpanBlurred = () => {
+        props.onTimeSpanChanged({ ...timeSpan })
     }
 
     return (
@@ -29,8 +40,9 @@ export function TimeSpanInput(props: TimeSpanProps) {
                     variant="outlined"
                     size="small"
                     label="Minutes"
-                    value={props.timeSpan.minutes}
-                    onBlur={onMinutesChanged}
+                    value={timeSpan.minutes}
+                    onChange={onMinutesChanged}
+                    onBlur={onTimeSpanBlurred}
                     inputProps={{ min: 0, max: 60 }}
                     sx={{
                         '& fieldset': {
@@ -44,8 +56,9 @@ export function TimeSpanInput(props: TimeSpanProps) {
                     variant="outlined"
                     size="small"
                     label="Seconds"
-                    value={props.timeSpan.seconds.toString().padStart(2, "0")}
-                    onBlur={onSecondsChanged}
+                    value={timeSpan.seconds.toString().padStart(2, "0")}
+                    onChange={onSecondsChanged}
+                    onBlur={onTimeSpanBlurred}
                     inputProps={{ min: 0, max: 59 }}
                     sx={{
                         marginLeft: "-1px",

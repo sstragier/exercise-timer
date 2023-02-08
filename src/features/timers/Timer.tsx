@@ -1,11 +1,10 @@
-import { Button, Checkbox, FormControlLabel, FormGroup, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Button, Stack, TextField, Typography } from "@mui/material";
 import { nanoid } from "@reduxjs/toolkit";
 import { useAppDispatch, useAppSelector } from "app/hooks";
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useImmer } from "use-immer";
-import { selectTimerById, timerNameUpdated, timerStepAdded, timerStepUpdated, type TimerStep, type TimeSpan } from "./timersSlice";
-import { TimeSpanInput } from "./TimeSpanInput";
+import { selectTimerById, selectTimerStepIds, timerNameUpdated, timerStepAdded, type TimerStep } from "./timersSlice";
+import { TimerStepItem } from "./TimerStepItem";
 
 const emptyStep: Omit<TimerStep, "id"> = {
     name: "",
@@ -15,101 +14,36 @@ const emptyStep: Omit<TimerStep, "id"> = {
     iterationGap: { minutes: 0, seconds: 0 }
 };
 
-interface TimerStepItemProps {
-    step: TimerStep
-    onTimerStepChanged: (step: TimerStep) => void
-}
-
-function TimerStepItem({ step, onTimerStepChanged } : TimerStepItemProps) {
-    const onNameChanged = (e: React.FocusEvent<HTMLInputElement>) => {
-        onTimerStepChanged({ ...step, name: e.target.value })
-    }
-
-    const onDurationChanged = (duration: TimeSpan) => {
-        onTimerStepChanged({ ...step, duration })
-    }
-
-    const onRepeatChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onTimerStepChanged({ ...step, repeat: e.target.checked})
-    }
-    
-    const onIterationsChanged = (e: React.FocusEvent<HTMLInputElement>) => {
-        let iterations = Math.floor(e.target.valueAsNumber);
-        if (iterations < 1) iterations = 1;
-
-        onTimerStepChanged({ ...step, iterations})
-    }
-
-    const onIterationGapChanged = (iterationGap: TimeSpan) => {
-        onTimerStepChanged({ ...step, iterationGap })
-    }
-
-    return (
-        <Paper elevation={2} sx={{ p: 2, border: "solid 1px lightgray" }}>
-            <Stack gap={2}>
-                <Stack direction="row" gap={2}>
-                    <TextField
-                        type="text"
-                        variant="outlined"
-                        size="small"
-                        label="Name"
-                        value={step.name}
-                        onBlur={onNameChanged}
-                    />
-                    <TimeSpanInput timeSpan={step.duration} onTimeSpanChanged={d => onDurationChanged(d)} />
-                    <FormGroup>
-                        <FormControlLabel
-                            label="Repeat"
-                            control={<Checkbox checked={step.repeat} onChange={e => onRepeatChanged(e)} />}
-                        />
-                    </FormGroup>
-
-                </Stack>
-                {step.repeat && <Stack direction="row" gap={2}>
-                    <TextField
-                            type="number"
-                            variant="outlined"
-                            size="small"
-                            label="Iterations"
-                            value={step.iterations}
-                            onBlur={onIterationsChanged}
-                            inputProps={{ min: 1 }}
-                        />
-                    <TimeSpanInput timeSpan={step.iterationGap} onTimeSpanChanged={d => onIterationGapChanged(d)} />
-                </Stack>}
-            </Stack>
-        </Paper>
-    )
-}
-
 export function Timer() {
     const { timerId } = useParams();
     if (!timerId) return <Typography variant="h3">Timer not found</Typography>
 
-    const timer = useAppSelector(state => selectTimerById(state, timerId));
-    if (!timer) return <Typography variant="h3">Timer not found</Typography>
+    const stateTimer = useAppSelector(state => selectTimerById(state, timerId));
+    if (!stateTimer) return <Typography variant="h3">Timer not found</Typography>
 
-    const [isRunning, setIsRunning] = useImmer(false);
+    const stepIds = useAppSelector(state => selectTimerStepIds(state, timerId)) ?? [];
+
+    const [timerName, setTimerName] = useState(stateTimer.name)
+    const [isRunning, setIsRunning] = useState(false);
     const dispatch = useAppDispatch();
 
-    const onNameChanged = (e: React.FocusEvent<HTMLInputElement>) => {
-        dispatch(timerNameUpdated({ id: timer.id, name: e.target.value }))
+    const onNameChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTimerName(e.target.value)
     }
-
-    const onTimerStepChanged = (step: TimerStep, index: number) => {
-        dispatch(timerStepUpdated({ id: timer.id, step }))
+    const onNameBlurred = () => {
+        dispatch(timerNameUpdated({ id: timerId, name: timerName }))
     }
 
     const onAdd = () => {
         const newStep = { ...emptyStep, id: nanoid() }
-        dispatch(timerStepAdded({ id: timer.id, step: newStep }))
+        dispatch(timerStepAdded({ timerId, step: newStep }))
     }
 
     const onStart = async () => {
         console.log("started");
         setIsRunning(true)
         
-        for (const step of timer.steps) {
+        for (const step of stateTimer.steps) {
             // if (!isRunning) return;
             const totalSeconds = (step.duration.minutes * 60) + step.duration.seconds;
             await startSpeaking(`starting ${step.name}`);
@@ -139,21 +73,22 @@ export function Timer() {
         setIsRunning(false)
     }
 
-    const stepElements = timer.steps.map((s, i) => (
+    const stepElements = stepIds.map(id => (
         <TimerStepItem
-            key={s.id}
-            step={s}
-            onTimerStepChanged={step => onTimerStepChanged(step, i)}
+            key={id}
+            timerId={timerId}
+            stepId={id}
         />
     ))
 
     return (
         <Stack gap={2}>
-            <Typography variant="h3">Timer</Typography>
             <TextField
-                variant="outlined"
-                value={timer.name}
-                onBlur={onNameChanged}
+                variant="standard"
+                value={timerName}
+                onChange={onNameChanged}
+                onBlur={onNameBlurred}
+                InputProps={{ sx: { fontSize: "xx-large" } }}
             />
             {stepElements}
             <Stack direction="row" gap={1}>

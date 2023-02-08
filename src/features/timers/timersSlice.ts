@@ -42,6 +42,11 @@ const timersSlice = createSlice({
             saveTimer(action.payload);
             timersAdapter.addOne(state, action);
         },
+        timerDeleted(state, action: PayloadAction<{ timerId: string }>) {
+            const { timerId } = action.payload;
+            deleteTimer(timerId);
+            timersAdapter.removeOne(state, timerId);
+        },
         timerNameUpdated(state, action: PayloadAction<{ id: string, name: string }>) {
             const { id, name } = action.payload;
             const timer = state.entities[id];
@@ -50,17 +55,25 @@ const timersSlice = createSlice({
             timer.name = name;
             saveTimer(timer);
         },
-        timerStepAdded(state, action: PayloadAction<{ id: string, step: TimerStep }>) {
-            const { id, step } = action.payload;
-            const timer = state.entities[id];
+        timerStepAdded(state, action: PayloadAction<{ timerId: string, step: TimerStep }>) {
+            const { timerId, step } = action.payload;
+            const timer = state.entities[timerId];
             if (!timer) return;
             
             timer.steps.push(step);
             saveTimer(timer);
         },
-        timerStepUpdated(state, action: PayloadAction<{ id: string, step: TimerStep }>) {
-            const { id, step } = action.payload;
-            const timer = state.entities[id];
+        timerStepDeleted(state, action: PayloadAction<{ timerId: string, stepId: string }>) {
+            const { timerId, stepId } = action.payload;
+            const timer = state.entities[timerId];
+            if (!timer) return;
+            
+            timer.steps = timer.steps.filter(s => s.id !== stepId);
+            saveTimer(timer);
+        },
+        timerStepUpdated(state, action: PayloadAction<{ timerId: string, step: TimerStep }>) {
+            const { timerId, step } = action.payload;
+            const timer = state.entities[timerId];
             if (!timer) return;
             
             timer.steps = timer.steps.map(s => s.id === step.id ? step : s);
@@ -73,26 +86,36 @@ function saveTimer(timer: Timer) {
     localStorage.setItem(STORAGE_PREFIX + timer.id, JSON.stringify(timer));
 }
 
+function deleteTimer(timerId: string) {
+    localStorage.removeItem(STORAGE_PREFIX + timerId);
+}
+
 export const {
     selectAll: selectAllTimers,
     selectById: selectTimerById,
 } = timersAdapter.getSelectors((state: RootState) => state.timers)
 
-export const selectStepIds = createSelector(
+export const selectTimerStepIds = createSelector(
     [ selectTimerById ],
     (timer) => timer?.steps.map(s => s.id)
 );
 
-export const selectStepById = createSelector(
-    [ selectTimerById, (_, stepId: string) => stepId ],
+interface SelectTimerStepByIdOptions { timerId: string, stepId: string }
+export const selectTimerStepById = createSelector(
+    [
+        (state, options: SelectTimerStepByIdOptions) => selectTimerById(state, options.timerId),
+        (_, options: SelectTimerStepByIdOptions) => options.stepId
+    ],
     (timer, stepId) => timer?.steps.find(s => s.id === stepId)
 );
 
 export const {
     fetchTimers,
     timerAdded,
+    timerDeleted,
     timerNameUpdated,
     timerStepAdded,
+    timerStepDeleted,
     timerStepUpdated
 } = timersSlice.actions;
 
