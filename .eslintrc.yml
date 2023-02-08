@@ -1,0 +1,30 @@
+env:
+  browser: true
+  es2021: true
+extends:
+  - plugin:react/recommended
+  - standard-with-typescript
+  - prettier # ESLint recommends this option to turn off all formatting rules and use prettier instead
+overrides: []
+parser: "@typescript-eslint/parser"
+parserOptions:
+  ecmaVersion: latest
+  sourceType: module
+  project:
+    - ./tsconfig.json
+plugins:
+  - react
+  - "@typescript-eslint"
+rules:
+  # This rule is for legacy react, and no longer needed
+  react/react-in-jsx-scope: off
+  # This was preventing async methods from being called by event handlers
+  "@typescript-eslint/no-misused-promises": [error, { checksVoidReturn: { attributes: false } }]
+  # Don't require functions to have their types defined, let Typescript handle that
+  "@typescript-eslint/explicit-function-return-type": off
+  # Don't need to require async for promise functions, since we can just return a Promise directly
+  "@typescript-eslint/promise-function-async": off
+  # This just add extra code to arrow functions
+  "@typescript-eslint/no-confusing-void-expression": off
+  # Allow booleans to treat null/undefined as falsey
+  "@typescript-eslint/strict-boolean-expressions": off
