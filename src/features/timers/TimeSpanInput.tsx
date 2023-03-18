@@ -1,73 +1,51 @@
-import { Stack, TextField } from "@mui/material"
-import { useImmer } from "use-immer"
-import { type TimeSpan } from "./timersSlice"
+import { Stack, type SxProps, type Theme } from "@mui/material";
+import { TimeField, type TimeValidationError } from '@mui/x-date-pickers';
+import { type FieldChangeHandlerContext } from "@mui/x-date-pickers/internals/hooks/useField";
+import dayjs, { type Dayjs } from 'dayjs';
+import { useImmer } from "use-immer";
+import { type TimeSpan } from "./timersSlice";
 
 export interface TimeSpanProps {
+    label: string
     timeSpan: TimeSpan
+    sx?: SxProps<Theme>
     onTimeSpanChanged: (timeSpan: TimeSpan) => void
 }
 
 export function TimeSpanInput(props: TimeSpanProps) {
-    const [timeSpan, updateTimeSpan] = useImmer(props.timeSpan);
+    const [date, updateDate] = useImmer<Dayjs | null>(convertTimeSpanToDate(props.timeSpan));
 
-    const onMinutesChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let minutes = Math.floor(e.target.valueAsNumber)
-        if (minutes < 0) minutes = 0;
-        
-        updateTimeSpan(draft => {
-            draft.minutes = minutes
-        })
+    const onChanged = (value: Dayjs | null, context: FieldChangeHandlerContext<TimeValidationError>) => {
+        updateDate(value);
     }
 
-    const onSecondsChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let seconds = Math.floor(e.target.valueAsNumber);
-        if (seconds < 0) seconds = 0;
-        if (seconds > 59) seconds = 59;
-
-        updateTimeSpan(draft => {
-            draft.seconds = seconds
-        })
-    }
-
-    const onTimeSpanBlurred = () => {
+    const onBlurred = () => {
+        const timeSpan = convertDateToTimeSpan(date);
         props.onTimeSpanChanged({ ...timeSpan })
     }
 
+    function convertTimeSpanToDate(t: TimeSpan): Dayjs {
+        const unixEpochInMs = ((t.minutes * 60) + t.seconds) * 1000;
+        return dayjs(unixEpochInMs);
+    }
+    
+    function convertDateToTimeSpan(d: Dayjs | null): TimeSpan {
+        return {
+            minutes: d?.minute() ?? 0,
+            seconds: d?.second() ?? 0
+        };
+    }
+
     return (
-        <Stack direction="row">
-            <TextField
-                    type="number"
-                    variant="outlined"
-                    size="small"
-                    label="Minutes"
-                    value={timeSpan.minutes}
-                    onChange={onMinutesChanged}
-                    onBlur={onTimeSpanBlurred}
-                    inputProps={{ min: 0, max: 60 }}
-                    sx={{
-                        '& fieldset': {
-                            borderTopRightRadius: 0,
-                            borderBottomRightRadius: 0
-                        }
-                    }}
-                />
-            <TextField
-                    type="number"
-                    variant="outlined"
-                    size="small"
-                    label="Seconds"
-                    value={timeSpan.seconds.toString().padStart(2, "0")}
-                    onChange={onSecondsChanged}
-                    onBlur={onTimeSpanBlurred}
-                    inputProps={{ min: 0, max: 59 }}
-                    sx={{
-                        marginLeft: "-1px",
-                        '& fieldset': {
-                            borderTopLeftRadius: 0,
-                            borderBottomLeftRadius: 0
-                        }
-                    }}
-                />
+        <Stack direction="row" sx={props.sx}>
+            <TimeField
+                label={props.label + " (mm:ss)"}
+                value={date}
+                onChange={onChanged}
+                onBlur={onBlurred}
+                size="small"
+                format="mm:ss"
+            />
         </Stack>
     )
 }

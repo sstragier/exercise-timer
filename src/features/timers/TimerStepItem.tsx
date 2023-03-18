@@ -68,23 +68,27 @@ export function TimerStepItem({ timerId, stepId } : TimerStepItemProps) {
         <Paper elevation={2} sx={{ p: 2, border: "solid 1px lightgray" }}>
             <Stack gap={2}>
                 <Stack direction="row" gap={2}>
-                    <TextField
-                        type="text"
-                        variant="outlined"
-                        size="small"
-                        label="Name"
-                        value={step.name}
-                        onChange={onNameChanged}
-                        onBlur={onStepBlurred}
-                    />
-                    <TimeSpanInput timeSpan={step.duration} onTimeSpanChanged={d => onDurationChanged(d)} />
-                    <FormGroup>
-                        <FormControlLabel
-                            label="Repeat"
-                            control={<Checkbox checked={step.repeat} onChange={e => onRepeatChanged(e)} onBlur={onStepBlurred} />}
+                    <Stack direction={{ xs: "column", sm: "row" }} gap={2} flexGrow={1}>
+                        <TextField
+                            type="text"
+                            variant="outlined"
+                            size="small"
+                            label="Name"
+                            value={step.name}
+                            onChange={onNameChanged}
+                            onBlur={onStepBlurred}
                         />
-                    </FormGroup>
-                    <Box flexGrow={1} textAlign="right">
+                        <Stack direction="row" gap={2}>
+                            <TimeSpanInput label="Duration" timeSpan={step.duration} onTimeSpanChanged={d => onDurationChanged(d)} />
+                            <FormGroup>
+                                <FormControlLabel
+                                    label="Repeat"
+                                    control={<Checkbox checked={step.repeat} onChange={e => onRepeatChanged(e)} onBlur={onStepBlurred} />}
+                                />
+                            </FormGroup>
+                        </Stack>
+                    </Stack>
+                    <Box textAlign="right">
                         <IconButton onClick={onDelete}>
                             <DeleteIcon />
                         </IconButton>
@@ -100,8 +104,14 @@ export function TimerStepItem({ timerId, stepId } : TimerStepItemProps) {
                             onChange={onIterationsChanged}
                             onBlur={onStepBlurred}
                             inputProps={{ min: 1 }}
+                            sx={{ flexBasis: { xs: "50%", sm: "initial" } }}
                         />
-                    <TimeSpanInput timeSpan={step.iterationGap} onTimeSpanChanged={d => onIterationGapChanged(d)} />
+                    <TimeSpanInput
+                        label="Gap"
+                        timeSpan={step.iterationGap}
+                        onTimeSpanChanged={d => onIterationGapChanged(d)}
+                        sx={{ flexBasis: { xs: "50%", sm: "initial" } }}
+                    />
                 </Stack>}
             </Stack>
         </Paper>
