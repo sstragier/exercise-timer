@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/exercise-timer/static/css/main.e6c13ad2.css",
+    "main.js": "/exercise-timer/static/js/main.22597929.js",
+    "static/js/787.f4de1ac9.chunk.js": "/exercise-timer/static/js/787.f4de1ac9.chunk.js",
+    "index.html": "/exercise-timer/index.html",
+    "main.e6c13ad2.css.map": "/exercise-timer/static/css/main.e6c13ad2.css.map",
+    "main.22597929.js.map": "/exercise-timer/static/js/main.22597929.js.map",
+    "787.f4de1ac9.chunk.js.map": "/exercise-timer/static/js/787.f4de1ac9.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.22597929.js"
+  ]
+}
