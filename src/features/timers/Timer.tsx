@@ -14,6 +14,8 @@ const emptyStep: Omit<TimerStep, "id"> = {
     iterationGap: { minutes: 0, seconds: 0 }
 };
 
+let wakeLock: WakeLockSentinel | undefined;
+
 export function Timer() {
     const { timerId } = useParams();
     if (!timerId) return <Typography variant="h3">Timer not found</Typography>
@@ -40,37 +42,43 @@ export function Timer() {
     }
 
     const onStart = async () => {
-        console.log("started");
-        setIsRunning(true)
-        
-        for (const step of stateTimer.steps) {
-            // if (!isRunning) return;
-            const totalSeconds = (step.duration.minutes * 60) + step.duration.seconds;
-            await startSpeaking(`starting ${step.name}`);
-            await new Promise(resolve => setTimeout(resolve, 5000))
+        try {
+            console.log("started");
+            setIsRunning(true)
+            await acquireScreenLock();
+            
+            for (const step of stateTimer.steps) {
+                // if (!isRunning) return;
+                const totalSeconds = (step.duration.minutes * 60) + step.duration.seconds;
+                await startSpeaking(`starting ${step.name}`);
+                await new Promise(resolve => setTimeout(resolve, 5000))
 
-            const iterations = step.repeat ? step.iterations : 1;
-            for (let i = 0; i < iterations; i++) {
-                // if (!isRunning) return;
-                if (step.repeat && iterations > 1) await startSpeaking(`${i + 1}`);
-                if (totalSeconds > 0) {
-                    await new Promise(resolve => setTimeout(resolve, totalSeconds * 1000))
+                const iterations = step.repeat ? step.iterations : 1;
+                for (let i = 0; i < iterations; i++) {
+                    // if (!isRunning) return;
+                    if (step.repeat && iterations > 1) await startSpeaking(`${i + 1}`);
+                    if (totalSeconds > 0) {
+                        await new Promise(resolve => setTimeout(resolve, totalSeconds * 1000))
+                    }
+                    
+                    // if (!isRunning) return;
+                    const totalGapSeconds = (step.iterationGap.minutes * 60) + step.iterationGap.seconds;
+                    if (step.repeat && iterations > 1 && totalGapSeconds > 0 && i < iterations - 1) {
+                        await startSpeaking("rest");
+                        await new Promise(resolve => setTimeout(resolve, totalGapSeconds * 1000))
+                    }
                 }
-                
-                // if (!isRunning) return;
-                const totalGapSeconds = (step.iterationGap.minutes * 60) + step.iterationGap.seconds;
-                if (step.repeat && iterations > 1 && totalGapSeconds > 0 && i < iterations - 1) {
-                    await startSpeaking("rest");
-                    await new Promise(resolve => setTimeout(resolve, totalGapSeconds * 1000))
-                }
+
+                console.log("finished step: " + step.name)
+                await startSpeaking(`finished ${step.name}`);
             }
-
-            console.log("finished step: " + step.name)
-            await startSpeaking(`finished ${step.name}`);
+            
+            console.log("finished");
+            setIsRunning(false)
+        } finally {
+            await wakeLock?.release();
+            wakeLock = undefined;
         }
-        
-        console.log("finished");
-        setIsRunning(false)
     }
 
     const stepElements = stepIds.map(id => (
@@ -100,6 +108,19 @@ export function Timer() {
             </Stack>
         </Stack>
     )
+
+    async function acquireScreenLock(): Promise<boolean> {
+        if (!("wakeLock" in navigator)) return true;
+        if (wakeLock) return true;
+
+        try {
+            wakeLock = await navigator.wakeLock.request("screen");
+            return true;
+        } catch (e) {
+            alert(e);
+            return false;
+        }
+    }
 
     async function startSpeaking(message: string) {
         const utterance = new SpeechSynthesisUtterance(message);
